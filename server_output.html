@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang=ja>
+<head>
+  <meta charset=utf-8>
+  <meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>お小遣い帳</title>
+  <style>
+    :root { --pad:14px; --gap:10px; --radius:14px; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, 'Noto Sans JP', sans-serif; background:#f7f7f8; color:#111; }
+    .header { position:sticky; top:0; background:#fff; border-bottom:1px solid #ececec; padding:var(--pad); z-index:1; }
+    .wrap { max-width:760px; margin:0 auto; padding:var(--pad); }
+    .card { background:#fff; border-radius:var(--radius); box-shadow:0 1px 2px rgba(0,0,0,.05); padding:var(--pad); margin-bottom:var(--gap); }
+    .row { display:flex; gap:var(--gap); } .row>* { flex:1; }
+    input[type=text], input[type=number], input[type=date], input[type=month] { width:100%; font-size:16px; padding:12px; border:1px solid #ddd; border-radius:10px; box-sizing:border-box; }
+    .btn { display:inline-block; width:100%; text-align:center; padding:12px; font-weight:700; border-radius:12px; border:none; background:#111; color:#fff; }
+    .btn.sec { background:#eee; color:#111; }
+    .tabs { display:flex; gap:8px; } .tab { flex:1; text-align:center; padding:10px; border-radius:999px; background:#eee; font-weight:700; cursor:pointer; } .tab.active { background:#111; color:#fff; }
+    table { width:100%; border-collapse:collapse; } th,td { padding:10px; border-bottom:1px solid #eee; font-size:14px; }
+    .pos { color:#0a7; font-weight:700; } .neg { color:#d33; font-weight:700; }
+    .footer { text-align:center; color:#777; font-size:12px; padding:20px; }
+  </style>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/htm@3.1.1/dist/htm.umd.js"></script>
+</head>
+<body>
+  <div id=root></div>
+  <script>
+    const html = htm.bind(React.createElement);
+    function fmtYen(n) {
+      const v = Number(n||0);
+      const s = v.toLocaleString('ja-JP');
+      if (v>0) return html`<span class=pos>+${s}円</span>`;
+      if (v<0) return html`<span class=neg>${s}円</span>`;
+      return s + '円';
+    }
+    async function api(path, opts={}) {
+      const res = await fetch(path, opts);
+      if (!res.ok) throw new Error(await res.text());
+      const ct = res.headers.get('content-type')||'';
+      return ct.includes('application/json') ? res.json() : res.text();
+    }
+    function Tabs({tab, setTab}) {
+      const T = (k, label) => html`<div class=${'tab '+(tab===k?'active':'')} onClick=${()=>setTab(k)}>${label}</div>`;
+      return html`<div class=tabs>${T('add','入力')}${T('list','履歴')}${T('sum','集計')}${T('exp','エクスポート')}</div>`
+    }
+    function AddForm({onAdded, nowBalance}) {
+      const [item, setItem] = React.useState('');
+      const [amount, setAmount] = React.useState('');
+      const [dateStr, setDateStr] = React.useState(new Date().toISOString().slice(0,10));
+      const [err, setErr] = React.useState('');
+      const submit = async (e)=>{
+        e.preventDefault(); setErr('');
+        if (!item.trim()) return setErr('内容は必須です');
+        if (!/^[-+]?\d+$/.test(amount)) return setErr('金額は整数（入金=正、出金=負）');
+        const payload = { item, amount: parseInt(amount,10), date: dateStr };
+        await api('/api/records', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+        setItem(''); setAmount(''); onAdded && onAdded();
+      };
+      return html`
+        <div class=card>
+          <div style="font-weight:800; margin-bottom:8px;">入出金の登録</div>
+          <form onSubmit=${submit} style="display:flex; flex-direction:column; gap:10px;">
+            <input type=text placeholder="内容（例: お小遣い / おやつ）" value=${item} onChange=${e=>setItem(e.target.value)} required>
+            <div class=row>
+              <input type=number inputmode=numeric placeholder="金額（入=正 / 出=負）" value=${amount} onChange=${e=>setAmount(e.target.value)} required>
+              <input type=date value=${dateStr} onChange=${e=>setDateStr(e.target.value)}>
+            </div>
+            <button class=btn type=submit>登録</button>
+            ${err && html`<div style="color:#d33;">${err}</div>`}
+          </form>
+          <div style="margin-top:8px;">現在の残高: ${fmtYen(nowBalance)}</div>
+        </div>`
+    }
+    function ListView({records}) {
+      if (!records.length) return html`<div class=card>記録がありません</div>`;
+      return html`<div class=card>
+        <div style="font-weight:800; margin-bottom:8px;">履歴</div>
+        <table>
+          <tr><th>日付</th><th>内容</th><th style="text-align:right">金額</th><th style="text-align:right">残高</th></tr>
+          ${records.map(r=>html`<tr>
+            <td>${r.date}</td>
+            <td>${r.item}</td>
+            <td style="text-align:right">${fmtYen(r.amount)}</td>
+            <td style="text-align:right">${fmtYen(r.balance)}</td>
+          </tr>`)}
+        </table>
+      </div>`
+    }
+    function SummaryView() {
+      const ym0 = new Date().toISOString().slice(0,7);
+      const [ym, setYm] = React.useState(ym0);
+      const [data, setData] = React.useState({income:0, expense:0, net:0});
+      const load = async (m)=>{ setData(await api('/api/summary?month='+encodeURIComponent(m))); };
+      React.useEffect(()=>{ load(ym); },[]);
+      return html`<div class=card>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div style="font-weight:800;">月次集計</div>
+          <div class=row style="max-width:260px;">
+            <input type=month value=${ym} onChange=${e=>setYm(e.target.value)}>
+            <button class="btn sec" onClick=${()=>load(ym)} style="width:auto">表示</button>
+          </div>
+        </div>
+        <div style="margin-top:10px;">
+          <div>対象: <span style="padding:4px 8px; background:#eee; border-radius:999px;">${ym}</span></div>
+          <div style="margin-top:8px;">収入: ${fmtYen(data.income)}</div>
+          <div>支出: ${fmtYen(-data.expense)}</div>
+          <div style="font-weight:800;">差額: ${fmtYen(data.net)}</div>
+        </div>
+      </div>`
+    }
+    function ExportView() {
+      return html`<div class=card>
+        <div style="font-weight:800; margin-bottom:8px;">エクスポート</div>
+        <div class=row>
+          <a class=btn sec href="/export?file=allowance" download>allowance.csv をダウンロード</a>
+          <a class=btn sec href="/export?file=goals" download>goals.csv をダウンロード</a>
+        </div>
+      </div>`
+    }
+    function App(){
+      const [tab, setTab] = React.useState('add');
+      const [records, setRecords] = React.useState([]);
+      const [balance, setBalance] = React.useState(0);
+      const load = async ()=>{
+        const data = await api('/api/records');
+        setRecords(data.records); setBalance(data.balance);
+      };
+      React.useEffect(()=>{ load(); },[]);
+      return html`
+        <div class=header><div class=wrap>
+          <div style="display:flex; align-items:center; gap:12px;">
+            <div style="font-weight:900; font-size:18px;">お小遣い帳</div>
+            <div style="padding:4px 8px; background:#f0f0f0; border-radius:999px;">残高: ${fmtYen(balance)}</div>
+          </div>
+        </div></div>
+        <div class=wrap>
+          ${html`<${Tabs} tab=${tab} setTab=${setTab} />`}
+          ${tab==='add' && html`<${AddForm} onAdded=${load} nowBalance=${balance} />`}
+          ${tab==='list' && html`<${ListView} records=${records} />`}
+          ${tab==='sum' && html`<${SummaryView} />`}
+          ${tab==='exp' && html`<${ExportView} />`}
+          <div class=footer>ローカル専用 / ${window.location.host} / CSV保存</div>
+        </div>`
+    }
+    ReactDOM.createRoot(document.getElementById('root')).render(html`<${App} />`);
+  </script>
+</body>
+</html>
