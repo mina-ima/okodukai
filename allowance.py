@@ -10,6 +10,8 @@ import sys
 import tempfile
 import shutil
 from typing import Optional
+import cgi
+import re
 
 DEFAULT_HOST = os.environ.get("ALLOWANCE_HOST", "127.0.0.1")
 DEFAULT_PORT = int(os.environ.get("ALLOWANCE_PORT", "8000"))
@@ -315,30 +317,52 @@ INDEX_HTML = """<!doctype html>
       const del = async (lab)=>{ if(!confirm('削除しますか？')) return;
         await api('/api/presets?label='+encodeURIComponent(lab), {method:'DELETE'}); await load();
       };
-      return html`<${Frag}>
-        <div className="card">
-          <div style=${{fontWeight:900, fontSize:18}}>管理者（お手伝いプリセット）</div>
-          <form onSubmit=${add} className="row" style=${{marginTop:10}}>
-            <input type="text" placeholder="ラベル（例: 皿洗い）" value=${label} onChange=${e=>setLabel(e.target.value)} required />
-            <input type="number" inputmode="numeric" placeholder="金額（例: 100）" value=${amount} onChange=${e=>setAmount(e.target.value)} required />
-            <button className="btn primary" type="submit">追加</button>
-          </form>
-        </div>
-        <div className="card">
-          <div style=${{fontWeight:800}}>登録済みプリセット</div>
-          ${presets.length ? html`<table>
-            <tr>
-              <th>ラベル</th>
-              <th style=${{textAlign:'right'}}>金額</th>
-              <th style=${{width:'1%'}}></th>
-            </tr>
-            ${presets.map(p=>html`<tr>
-              <td>${p.label}</td><td style=${{textAlign:'right'}}>${fmtYen(p.amount)}</td>
-              <td><button className="btn warn" onClick=${()=>del(p.label)}>削除</button></td>
-            </tr>`)}
-          </table>` : html`<div className="muted">未登録</div>`}
-        </div>
-        <${NavLinks} to=${go} />
+      const ImportForm = ({name, label}) => html`\
+        <form method="POST" action="/import" encType="multipart/form-data" className="row">\
+          <input type="hidden" name="file" value=${name} />\
+          <input type="file" name="csvfile" accept=".csv" required />\
+          <button type="submit" className="btn">${label}をインポート</button>\
+        </form>\
+      `;
+      return html`<${Frag}>\
+        <div className="card">\
+          <div style=${{fontWeight:900, fontSize:18}}>管理者</div>\
+          <div style=${{marginTop:12}}>\
+            <div className="muted" style=${{marginBottom:6}}>データ入出力</div>\
+            <div className="grid">\
+              <a className="btn" href="/export?file=presets" download>プリセット出力</a>\
+              <a className="btn" href="/export?file=goals" download>目標リスト出力</a>\
+              <a className="btn" href="/export?file=allowance" download>入出金履歴出力</a>\
+            </div>\
+            <div style=${{display:'flex', flexDirection:'column', gap:10, marginTop:10}}>\
+              <${ImportForm} name="presets" label="プリセット" />\
+              <${ImportForm} name="goals" label="目標リスト" />\
+              <${ImportForm} name="allowance" label="入出金履歴" />\
+            </div>\
+          </div>\
+        </div>\
+\
+        <div className="card">\
+          <div style=${{fontWeight:800}}>お手伝いプリセット編集</div>\
+          <form onSubmit=${add} className="row" style=${{marginTop:10}}>\
+            <input type="text" placeholder="ラベル（例: 皿洗い）" value=${label} onChange=${e=>setLabel(e.target.value)} required />\
+            <input type="number" inputmode="numeric" placeholder="金額（例: 100）" value=${amount} onChange=${e=>setAmount(e.target.value)} required />\
+            <button className="btn primary" type="submit">追加</button>\
+          </form>\
+          <div style=${{fontWeight:800, marginTop:12}}>登録済みプリセット</div>\
+          ${presets.length ? html`<table>\
+            <tr>\
+              <th>ラベル</th>\
+              <th style=${{textAlign:'right'}}>金額</th>\
+              <th style=${{width:'1%'}}></th>\
+            </tr>\
+            ${presets.map(p=>html`<tr>\
+              <td>${p.label}</td><td style=${{textAlign:'right'}}>${fmtYen(p.amount)}</td>\
+              <td><button className="btn warn" onClick=${()=>del(p.label)}>削除</button></td>\
+            </tr>`)}\
+          </table>` : html`<div className="muted">未登録</div>`}\
+        </div>\
+        <${NavLinks} to=${go} />\
       </${Frag}>`;
     }
 
@@ -490,7 +514,30 @@ class AppHandler(BaseHTTPRequestHandler):
         try:
             p = urlparse(self.path)
             length = int(self.headers.get("Content-Length","0"))
-            raw = self.rfile.read(length)
+            if p.path == "/import":
+                form = cgi.FieldStorage(
+                    fp=self.rfile,
+                    headers=self.headers,
+                    environ={'REQUEST_METHOD': 'POST',
+                             'CONTENT_TYPE': self.headers['Content-Type']}
+                )
+                file_type = form.getvalue('file')
+                csv_file_item = form['csvfile']
+
+                if not file_type or not csv_file_item.file:
+                    self._send(400, b'bad request'); return
+
+                path = ALLOWANCE_CSV if file_type == "allowance" else (GOALS_CSV if file_type == "goals" else PRESETS_CSV)
+                
+                # Overwrite the file with new content
+                with open(path, "wb") as f:
+                    f.write(csv_file_item.file.read())
+
+                self.send_response(302)
+                self.send_header('Location', '/')
+                self.end_headers()
+                return
+
             if p.path == "/api/records":
                 try: body = json.loads(raw.decode("utf-8"))
                 except Exception:
