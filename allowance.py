@@ -239,7 +239,7 @@ INDEX_HTML = """<!doctype html>
       const submit = async (e)=>{
         e.preventDefault(); setErr('');
         if (!item.trim()) return setErr('内容は必須です');
-        if (!/^[-+]?\\d+$/.test(amount)) return setErr('金額は整数');
+        if (!/^[-+]?\d+$/.test(amount)) return setErr('金額は整数');
         const payload = { item, amount: -Math.abs(parseInt(amount,10)), date: dateStr };
         await api('/api/records', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
         setItem(''); setAmount('');
@@ -269,7 +269,7 @@ INDEX_HTML = """<!doctype html>
       const load = async()=> setGoals(await api('/api/goals'));
       React.useEffect(()=>{ load(); },[]);
       const add = async (e)=>{ e.preventDefault();
-        if(!name.trim() || !/^[-+]?\\d+$/.test(amt)) return;
+        if(!name.trim() || !/^[-+]?\d+$/.test(amt)) return;
         await api('/api/goals',{method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({goal:name, amount: parseInt(amt,10)})});
         setName(''); setAmt(''); await load();
       };
@@ -310,19 +310,19 @@ INDEX_HTML = """<!doctype html>
       const load = async()=> setPresets(await api('/api/presets'));
       React.useEffect(()=>{ load(); },[]);
       const add = async (e)=>{ e.preventDefault();
-        if(!label.trim() || !/^[-+]?\\d+$/.test(amount)) return;
+        if(!label.trim() || !/^[-+]?\d+$/.test(amount)) return;
         await api('/api/presets',{method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({label, amount: parseInt(amount,10)})});
         setLabel(''); setAmount(''); await load();
       };
       const del = async (lab)=>{ if(!confirm('削除しますか？')) return;
         await api('/api/presets?label='+encodeURIComponent(lab), {method:'DELETE'}); await load();
       };
-      const ImportForm = ({name, label}) => html`\
-        <form method="POST" action="/import" encType="multipart/form-data" className="row">\
-          <input type="hidden" name="file" value=${name} />\
-          <input type="file" name="csvfile" accept=".csv" required />\
-          <button type="submit" className="btn">${label}をインポート</button>\
-        </form>\
+      const ImportForm = ({name, label}) => html`
+        <form method="POST" action="/import" encType="multipart/form-data" className="row">
+          <input type="hidden" name="file" value=${name} />
+          <input type="file" name="csvfile" accept=".csv" required />
+          <button type="submit" className="btn">${label}をインポート</button>
+        </form>
       `;
       return html`<${Frag}>\
         <div className="card">\
@@ -539,6 +539,7 @@ class AppHandler(BaseHTTPRequestHandler):
                 return
 
             if p.path == "/api/records":
+                raw = self.rfile.read(length)
                 try: body = json.loads(raw.decode("utf-8"))
                 except Exception:
                     self._send(400, "text/plain; charset=utf-8", b"invalid json"); return
@@ -551,6 +552,7 @@ class AppHandler(BaseHTTPRequestHandler):
                 rec = add_record(item, int(amount), d or None)
                 ok_json(self, rec); return
             if p.path == "/api/goals":
+                raw = self.rfile.read(length)
                 try: body = json.loads(raw.decode("utf-8"))
                 except Exception:
                     self._send(400, "text/plain; charset=utf-8", b"invalid json"); return
@@ -561,6 +563,7 @@ class AppHandler(BaseHTTPRequestHandler):
                 append_row(GOALS_CSV, [goal, str(int(amount))])
                 ok_json(self, {"ok": True}); return
             if p.path == "/api/presets":
+                raw = self.rfile.read(length)
                 try: body = json.loads(raw.decode("utf-8"))
                 except Exception:
                     self._send(400, "text/plain; charset=utf-8", b"invalid json"); return
