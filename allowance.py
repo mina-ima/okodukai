@@ -165,27 +165,16 @@ INDEX_HTML = """<!doctype html>
       </div>`;
     }
 
-    function Home({go}) {
-      const [data, setData] = React.useState({balance:0, last7:[], goals:[], presets:[]});
-      const load = async()=> setData(await api('/api/home'));
-      React.useEffect(()=>{ load(); },[]);
+    function Home({go, data, load}) {
       return html`<${Frag}>
         <div className="card">
-          <div style=${{display:'flex', alignItems:'baseline', gap:'10px'}}>
-            <div style=${{fontWeight:900, fontSize:18}}>お小遣い帳</div>
-            <span className="pill">ホーム</span>
-          </div>
-          <div style=${{marginTop:8}}>現在の残高: <b>${fmtYen(data.balance)}</b></div>
-          <div style=${{marginTop:12}}>
-            <div className="muted" style=${{marginBottom:6}}>お手伝い（プリセット）</div>
-            <div className="grid">
-              ${data.presets.length ? data.presets.map(p=>html`
-                <button className="btn" onClick=${async()=>{
-                  await api('/api/records',{method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({item:p.label, amount: parseInt(p.amount,10)})});
-                  await load();
-                }}>${p.label}（${p.amount}）</button>
-              `) : html`<div className="muted">プリセット未登録です。管理者から追加できます。</div>`}
-            </div>
+          <div className="grid">
+            ${data.presets.length ? data.presets.map(p=>html`
+              <button className="btn" onClick=${async()=>{
+                await api('/api/records',{method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({item:p.label, amount: parseInt(p.amount,10)})});
+                await load();
+              }}>${p.label}（${p.amount}）</button>
+            `) : html`<div className="muted">プリセット未登録です。管理者から追加できます。</div>`}
           </div>
         </div>
 
@@ -394,8 +383,12 @@ INDEX_HTML = """<!doctype html>
 
     function App(){
       const [page, setPage] = React.useState('home');
+      const [data, setData] = React.useState({balance:0, last7:[], goals:[], presets:[]});
+      const load = async()=> setData(await api('/api/home'));
+      React.useEffect(()=>{ if(page==='home' || page==='withdraw') load(); },[page]);
+
       const go = (p)=> setPage(p);
-      const content = page==='home' ? html`<${Home} go=${go} />`
+      const content = page==='home' ? html`<${Home} go=${go} data=${data} load=${load} />`
         : page==='withdraw' ? html`<${Withdraw} go=${go} />`
         : page==='goal' ? html`<${Goal} go=${go} />`
         : page==='admin' ? html`<${Admin} go=${go} />`
@@ -403,8 +396,9 @@ INDEX_HTML = """<!doctype html>
         : html`<div className="card">Not Found</div>`;
       return html`<${Frag}>
         <div className="header"><div className="wrap">
-          <div style=${{display:'flex', alignItems:'center', gap:'12px'}}>
+          <div style=${{display:'flex', justifyContent:'space-between', alignItems:'center', gap:'12px'}}>
             <div style=${{fontWeight:900, fontSize:18}}>お小遣い帳</div>
+            ${(page==='home' || page==='withdraw') && html`<div style=${{fontSize:18, fontWeight:700}}>${fmtYen(data.balance)}</div>`}
           </div>
         </div></div>
         <div className="wrap">${content}</div>
