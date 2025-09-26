@@ -388,11 +388,11 @@ INDEX_HTML = """<!doctype html>
             <tr>\
               <th>ラベル</th>\
               <th style=${{textAlign:'right'}}>金額</th>\
-              <th style=${{width:'1%'}}></th>\
+              <th></th>\
             </tr>\
             ${presets.map(p=>html`<tr>\
               <td>${p.label}</td><td style=${{textAlign:'right'}}>${fmtYen(p.amount)}</td>\
-              <td><button className="btn warn" onClick=${()=>del(p.label)}>削除</button></td>\
+              <td><button className="btn warn" style=${{width:'auto', padding:'6px 10px', fontSize:'12px'}} onClick=${()=>del(p.label)}>削除</button></td>\
             </tr>`)}\
           </table>` : html`<div className="muted">未登録</div>`}\
         </div>\
