@@ -201,24 +201,20 @@ INDEX_HTML = """<!doctype html>
       </div>`;
     }
 
-    function GoalNavLinks({to}) {
-      const Button = (k,label)=>html`<button className="btn" onClick=${()=>to(k)}>${label}</button>`;
-      return html`<div className="row" style=${{gap: '8px'}}>
-        ${Button('home','ホーム')}
-        ${Button('withdraw','出金登録')}
-        ${Button('admin','管理者')}
-      </div>`;
-    }
-
     function Home({go, data, load}) {
+      const [deleting, setDeleting] = React.useState(null);
+
       const deleteRecord = async (index) => {
+        if (deleting !== null) return; // Prevent concurrent deletions
         if (!confirm('この記録を削除しますか？')) return;
+        setDeleting(index);
         try {
           await api(`/api/records?index=${index}`, {method: 'DELETE'});
           await load(); // Reload data after deletion
-          alert('記録を削除しました。');
         } catch (error) {
           alert('削除に失敗しました: ' + error.message);
+        } finally {
+          setDeleting(null);
         }
       };
 
@@ -267,7 +263,7 @@ INDEX_HTML = """<!doctype html>
                   <td>${r.date}</td><td>${r.item}</td>
                   <td style=${{textAlign:'right'}}>${fmtYen(r.amount)}</td>
                   <td style=${{textAlign:'right'}}>${fmtYen(r.balance)}</td>
-                  <td><button className="btn warn" style=${{width:'auto', padding:'6px 10px', fontSize:'12px'}} onClick=${()=>deleteRecord(r.originalIndex)}>削除</button></td>
+                  <td><button className="btn warn" style={{width:'auto', padding:'6px 10px', fontSize:'12px'}} disabled=${deleting === r.originalIndex} onClick=${()=>deleteRecord(r.originalIndex)}>${deleting === r.originalIndex ? '削除中...' : '削除'}</button></td>
                 </tr>`)}
               </table>
             </div>` : html`<div className="muted">直近7日間の記録はありません</div>`}
@@ -375,48 +371,48 @@ INDEX_HTML = """<!doctype html>
           <button type="submit" className="btn">${label}をインポート</button>
         </form>
       `;
-      return html`<${Frag}>\
-        <div className="card">\
-          <div style=${{fontWeight:900, fontSize:18}}>管理者</div>\
-          <div style=${{marginTop:12}}>\
-            <div className="muted" style=${{marginBottom:6}}>データ入出力</div>\
-            <div className="row">\
-              <select id="export-select" className="btn" style=${{flex:1}} onChange=${e=>setExportType(e.target.value)}>\
-                <option value="allowance">入出金履歴</option>\
-                <option value="goals">目標リスト</option>\
-                <option value="presets">プリセット</option>\
-              </select>\
-              <button className="btn primary" onClick=${handleExport}>エクスポート</button>\
-            </div>\
-            <div style=${{display:'flex', flexDirection:'column', gap:10, marginTop:10}}>\
-              <${ImportForm} name="presets" label="プリセット" />\
-              <${ImportForm} name="goals" label="目標リスト" />\
-              <${ImportForm} name="allowance" label="入出金履歴" />\
-            </div>\
-          </div>\
-        </div>\
-\
-        <div className="card">\
-          <div style=${{fontWeight:800}}>お手伝いプリセット編集</div>\
-          <form onSubmit=${add} className="row" style=${{marginTop:10}}>\
-            <input type="text" placeholder="ラベル（例: 皿洗い）" value=${label} onChange=${e=>setLabel(e.target.value)} required />\
-            <input type="number" inputmode="numeric" placeholder="金額（例: 100）" value=${amount} onChange=${e=>setAmount(e.target.value)} required />\
-            <button className="btn primary" type="submit">追加</button>\
-          </form>\
-          <div style=${{fontWeight:800, marginTop:12}}>登録済みプリセット</div>\
-          ${presets.length ? html`<table>\
-            <tr>\
-              <th>ラベル</th>\
-              <th style=${{textAlign:'right'}}>金額</th>\
-              <th></th>\
-            </tr>\
-            ${presets.map(p=>html`<tr>\
-              <td>${p.label}</td><td style=${{textAlign:'right'}}>${fmtYen(p.amount)}</td>\
-              <td><button className="btn warn" style=${{width:'auto', padding:'6px 10px', fontSize:'12px'}} onClick=${()=>del(p.label)}>削除</button></td>\
-            </tr>`)}\
-          </table>` : html`<div className="muted">未登録</div>`}\
-        </div>\
-        <${AdminNavLinks} to=${go} />\
+      return html`<${Frag}>
+        <div className="card">
+          <div style=${{fontWeight:900, fontSize:18}}>管理者</div>
+          <div style=${{marginTop:12}}>
+            <div className="muted" style=${{marginBottom:6}}>データ入出力</div>
+            <div className="row">
+              <select id="export-select" className="btn" style=${{flex:1}} onChange=${e=>setExportType(e.target.value)}>
+                <option value="allowance">入出金履歴</option>
+                <option value="goals">目標リスト</option>
+                <option value="presets">プリセット</option>
+              </select>
+              <button className="btn primary" onClick=${handleExport}>エクスポート</button>
+            </div>
+            <div style=${{display:'flex', flexDirection:'column', gap:10, marginTop:10}}>
+              <${ImportForm} name="presets" label="プリセット" />
+              <${ImportForm} name="goals" label="目標リスト" />
+              <${ImportForm} name="allowance" label="入出金履歴" />
+            </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <div style=${{fontWeight:800}}>お手伝いプリセット編集</div>
+          <form onSubmit=${add} className="row" style=${{marginTop:10}}>
+            <input type="text" placeholder="ラベル（例: 皿洗い）" value=${label} onChange=${e=>setLabel(e.target.value)} required />
+            <input type="number" inputmode="numeric" placeholder="金額（例: 100）" value=${amount} onChange=${e=>setAmount(e.target.value)} required />
+            <button className="btn primary" type="submit">追加</button>
+          </form>
+          <div style=${{fontWeight:800, marginTop:12}}>登録済みプリセット</div>
+          ${presets.length ? html`<table>
+            <tr>
+              <th>ラベル</th>
+              <th style=${{textAlign:'right'}}>金額</th>
+              <th></th>
+            </tr>
+            ${presets.map(p=>html`<tr>
+              <td>${p.label}</td><td style=${{textAlign:'right'}}>${fmtYen(p.amount)}</td>
+              <td><button className="btn warn" style=${{width:'auto', padding:'6px 10px', fontSize:'12px'}} onClick=${()=>del(p.label)}>削除</button></td>
+            </tr>`)}
+          </table>` : html`<div className="muted">未登録</div>`}
+        </div>
+        <${AdminNavLinks} to=${go} />
       </${Frag}>`;
     }
 
@@ -528,41 +524,29 @@ def last_n_days_records(n:int):
 def delete_record_by_index(idx: int):
     with lock:
         rows = read_rows(ALLOWANCE_CSV)
-        if not (0 <= idx < len(rows) - 1): # idx is 0-based, excluding header
+        header = rows[0]
+        records = rows[1:]
+
+        if not (0 <= idx < len(records)):
             raise IndexError("Record index out of bounds")
 
-        # Remove the row (idx + 1 because of header)
-        del rows[idx + 1]
+        # Remove the record
+        del records[idx]
 
-        # Recalculate balances for all subsequent rows
-        if len(rows) > 1:
-            current_balance = 0
-            # Find the balance of the row *before* the deleted one
-            # If the first record was deleted, start from 0
-            if idx == 0:
-                current_balance = 0
-            else:
-                # Find the last valid balance before the deleted record's position
-                # Iterate backwards from the row just before the deleted one
-                for i_rev in range(idx, 0, -1): # Iterate from idx down to 1 (inclusive)
-                    try:
-                        current_balance = int(rows[i_rev][3])
-                        break # Found a valid balance, stop
-                    except ValueError:
-                        continue # Keep searching backwards
-                else: # If loop completes without finding a valid balance
-                    current_balance = 0 # Fallback if no valid balance found before deleted record
-
-            for i in range(idx + 1, len(rows)):
-                try:
-                    amount = int(rows[i][2])
-                    current_balance += amount
-                    rows[i][3] = str(current_balance)
-                except ValueError:
-                    # Handle cases where amount might be malformed, skip recalculation for this row
-                    pass
+        # Recalculate all balances from scratch
+        new_rows = [header]
+        balance = 0
+        for record in records:
+            try:
+                # date, item, amount, balance
+                amount = int(record[2])
+                balance += amount
+                new_rows.append([record[0], record[1], record[2], str(balance)])
+            except (ValueError, IndexError):
+                # If row is malformed, just append it as is and continue
+                new_rows.append(record)
         
-        write_rows(ALLOWANCE_CSV, rows)
+        write_rows(ALLOWANCE_CSV, new_rows)
 
 class AppHandler(BaseHTTPRequestHandler):
     def do_GET(self):
