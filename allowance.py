@@ -174,6 +174,15 @@ INDEX_HTML = """<!doctype html>
       </div>`;
     }
 
+    function WithdrawNavLinks({to}) {
+      const Button = (k,label)=>html`<button className="btn" onClick=${()=>to(k)}>${label}</button>`;
+      return html`<div className="row" style=${{gap: '8px'}}>
+        ${Button('home','ホーム')}
+        ${Button('goal','目標登録')}
+        ${Button('admin','管理者')}
+      </div>`;
+    }
+
     function Home({go, data, load}) {
       return html`<${Frag}>
         <div className="card">
@@ -256,7 +265,7 @@ INDEX_HTML = """<!doctype html>
             <button className="btn primary" type="submit">登録</button>
           </form>
         </div>
-        <${NavLinks} to=${go} />
+        <${WithdrawNavLinks} to=${go} />
       </${Frag}>`;
     }
 
