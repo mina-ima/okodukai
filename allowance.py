@@ -211,6 +211,17 @@ INDEX_HTML = """<!doctype html>
     }
 
     function Home({go, data, load}) {
+      const deleteRecord = async (index) => {
+        if (!confirm('この記録を削除しますか？')) return;
+        try {
+          await api(`/api/records?index=${index}`, {method: 'DELETE'});
+          await load(); // Reload data after deletion
+          alert('記録を削除しました。');
+        } catch (error) {
+          alert('削除に失敗しました: ' + error.message);
+        }
+      };
+
       return html`<${Frag}>
         <div className="card">
           <div style=${{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
@@ -250,11 +261,13 @@ INDEX_HTML = """<!doctype html>
                   <th>内容</th>
                   <th style=${{textAlign:'right'}}>金額</th>
                   <th style=${{textAlign:'right'}}>残高</th>
+                  <th></th> <!-- New column for delete button -->
                 </tr>
                 ${data.last7.map(r=>html`<tr>
                   <td>${r.date}</td><td>${r.item}</td>
                   <td style=${{textAlign:'right'}}>${fmtYen(r.amount)}</td>
                   <td style=${{textAlign:'right'}}>${fmtYen(r.balance)}</td>
+                  <td><button className="btn warn" style=${{width:'auto', padding:'6px 10px', fontSize:'12px'}} onClick=${()=>deleteRecord(r.originalIndex)}>削除</button></td>
                 </tr>`)}
               </table>
             </div>` : html`<div className="muted">直近7日間の記録はありません</div>`}
@@ -496,8 +509,9 @@ def last_n_days_records(n:int):
     rows = read_rows(ALLOWANCE_CSV)
     edge = date.today() - timedelta(days=n-1)
     out = []
+    # Iterate with index to get the original row number
     for i, r in enumerate(rows):
-        if i==0 or len(r)<4: continue
+        if i==0 or len(r)<4: continue # Skip header and malformed rows
         d, item, amt, bal = r
         try:
             dt = datetime.strptime(d,"%Y-%m-%d").date()
@@ -505,10 +519,50 @@ def last_n_days_records(n:int):
             continue
         if dt >= edge:
             try:
-                out.append({"date": d, "item": item, "amount": int(amt), "balance": int(bal)})
+                # Store the original 0-based index of the row in the CSV (excluding header)
+                out.append({"originalIndex": i - 1, "date": d, "item": item, "amount": int(amt), "balance": int(bal)})
             except Exception:
                 pass
     return out[::-1]
+
+def delete_record_by_index(idx: int):
+    with lock:
+        rows = read_rows(ALLOWANCE_CSV)
+        if not (0 <= idx < len(rows) - 1): # idx is 0-based, excluding header
+            raise IndexError("Record index out of bounds")
+
+        # Remove the row (idx + 1 because of header)
+        del rows[idx + 1]
+
+        # Recalculate balances for all subsequent rows
+        if len(rows) > 1:
+            current_balance = 0
+            # Find the balance of the row *before* the deleted one
+            # If the first record was deleted, start from 0
+            if idx == 0:
+                current_balance = 0
+            else:
+                # Find the last valid balance before the deleted record's position
+                # Iterate backwards from the row just before the deleted one
+                for i_rev in range(idx, 0, -1): # Iterate from idx down to 1 (inclusive)
+                    try:
+                        current_balance = int(rows[i_rev][3])
+                        break # Found a valid balance, stop
+                    except ValueError:
+                        continue # Keep searching backwards
+                else: # If loop completes without finding a valid balance
+                    current_balance = 0 # Fallback if no valid balance found before deleted record
+
+            for i in range(idx + 1, len(rows)):
+                try:
+                    amount = int(rows[i][2])
+                    current_balance += amount
+                    rows[i][3] = str(current_balance)
+                except ValueError:
+                    # Handle cases where amount might be malformed, skip recalculation for this row
+                    pass
+        
+        write_rows(ALLOWANCE_CSV, rows)
 
 class AppHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -626,6 +680,19 @@ class AppHandler(BaseHTTPRequestHandler):
     def do_DELETE(self):
         try:
             p = urlparse(self.path)
+            if p.path == "/api/records":
+                q = parse_qs(p.query)
+                record_index_str = (q.get("index") or [""])[0]
+                if not is_int(record_index_str):
+                    self._send(400, "text/plain; charset=utf-8", b"invalid record index"); return
+                
+                try:
+                    delete_record_by_index(int(record_index_str))
+                    ok_json(self, {"ok": True}); return
+                except IndexError as e:
+                    self._send(404, "text/plain; charset=utf-8", str(e).encode("utf-8")); return
+                except Exception as e:
+                    self._send(500, "text/plain; charset=utf-8", str(e).encode("utf-8")); return
             if p.path == "/api/goals":
                 q = parse_qs(p.query); name = (q.get("goal") or [""])[0]
                 rows = read_rows(GOALS_CSV)
