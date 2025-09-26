@@ -137,6 +137,15 @@ INDEX_HTML = """<!doctype html>
 <body>
   <div id="root"></div>
   <script>
+    window.onerror = function(message, source, lineno, colno, error) {
+      fetch('/api/log-error', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ message, source, lineno, colno, error: error ? error.stack : null })
+      });
+      return true; // Prevent default browser error handling
+    };
+
     const html = htm.bind(React.createElement);
     const Frag = React.Fragment;
 
@@ -263,7 +272,7 @@ INDEX_HTML = """<!doctype html>
                   <td>${r.date}</td><td>${r.item}</td>
                   <td style=${{textAlign:'right'}}>${fmtYen(r.amount)}</td>
                   <td style=${{textAlign:'right'}}>${fmtYen(r.balance)}</td>
-                  <td><button className="btn warn" style={{width:'auto', padding:'6px 10px', fontSize:'12px'}} disabled=${deleting === r.originalIndex} onClick=${()=>deleteRecord(r.originalIndex)}>${deleting === r.originalIndex ? '削除中...' : '削除'}</button></td>
+                  <td><button className="btn warn" style=${{width:'auto', padding:'6px 10px', fontSize:'12px'}} disabled=${deleting === r.originalIndex} onClick=${()=>deleteRecord(r.originalIndex)}>${deleting === r.originalIndex ? '削除中...' : '削除'}</button></td>
                 </tr>`)}
               </table>
             </div>` : html`<div className="muted">直近7日間の記録はありません</div>`}
@@ -598,6 +607,15 @@ class AppHandler(BaseHTTPRequestHandler):
         try:
             p = urlparse(self.path)
             length = int(self.headers.get("Content-Length","0"))
+
+            if p.path == "/api/log-error":
+                raw = self.rfile.read(length)
+                print("\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+                print("!!!!!!!!!! CLIENT-SIDE ERROR !!!!!!!!!")
+                print(raw.decode("utf-8"))
+                print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n")
+                self._send(200, "text/plain; charset=utf-8", b"ok"); return
+
             if p.path == "/import":
                 form = cgi.FieldStorage(
                     fp=self.rfile,
