@@ -165,6 +165,15 @@ INDEX_HTML = """<!doctype html>
       </div>`;
     }
 
+    function AdminNavLinks({to}) {
+      const Button = (k,label)=>html`<button className="btn" onClick=${()=>to(k)}>${label}</button>`;
+      return html`<div className="row" style=${{gap: '8px', marginTop: '10px'}}>
+        ${Button('home','ホーム')}
+        ${Button('withdraw','出金登録')}
+        ${Button('goal','目標登録')}
+      </div>`;
+    }
+
     function HomeNavLinks({to}) {
       const Button = (k,label)=>html`<button className="btn" onClick=${()=>to(k)}>${label}</button>`;
       return html`<div className="row" style=${{gap: '8px'}}>
@@ -387,7 +396,7 @@ INDEX_HTML = """<!doctype html>
             </tr>`)}\
           </table>` : html`<div className="muted">未登録</div>`}\
         </div>\
-        <${NavLinks} to=${go} />\
+        <${AdminNavLinks} to=${go} />\
       </${Frag}>`;
     }
 
