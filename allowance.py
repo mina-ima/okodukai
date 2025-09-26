@@ -183,6 +183,24 @@ INDEX_HTML = """<!doctype html>
       </div>`;
     }
 
+    function GoalNavLinks({to}) {
+      const Button = (k,label)=>html`<button className="btn" onClick=${()=>to(k)}>${label}</button>`;
+      return html`<div className="row" style=${{gap: '8px'}}>
+        ${Button('home','ホーム')}
+        ${Button('withdraw','出金登録')}
+        ${Button('admin','管理者')}
+      </div>`;
+    }
+
+    function GoalNavLinks({to}) {
+      const Button = (k,label)=>html`<button className="btn" onClick=${()=>to(k)}>${label}</button>`;
+      return html`<div className="row" style=${{gap: '8px'}}>
+        ${Button('home','ホーム')}
+        ${Button('withdraw','出金登録')}
+        ${Button('admin','管理者')}
+      </div>`;
+    }
+
     function Home({go, data, load}) {
       return html`<${Frag}>
         <div className="card">
@@ -306,7 +324,7 @@ INDEX_HTML = """<!doctype html>
             </tr>`)}
           </table>` : html`<div className="muted">なし</div>`}
         </div>
-        <${NavLinks} to=${go} />
+        <${GoalNavLinks} to=${go} />
       </${Frag}>`;
     }
 
