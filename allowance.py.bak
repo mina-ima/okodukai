@@ -106,13 +106,15 @@ INDEX_HTML = """<!doctype html>
     @media (prefers-color-scheme: light) {
       :root { --bg:#f7f7f8; --fg:#111; --card:#fff; --line:#ececec; --muted:#777; }
     }
-    *{box-sizing:border-box}
+    *{
+      box-sizing:border-box
+    }
     body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, 'Noto Sans JP', sans-serif; background:var(--bg); color:var(--fg); }
     a { color:inherit; text-decoration:none; }
     .header { position:sticky; top:0; background:var(--card); border-bottom:1px solid var(--line); padding:var(--pad); z-index:1; }
     .wrap { max-width:760px; margin:0 auto; padding:var(--pad); }
     .card { background:var(--card); border-radius:var(--radius); box-shadow:0 1px 2px rgba(0,0,0,.05); padding:var(--pad); margin-bottom:var(--gap); border:1px solid var(--line);}
-    .row { display:flex; gap:var(--gap); } .row>* { flex:1; }
+    .row { display:flex; gap:var(--gap); } .row>*{ flex:1; }
     input[type=text], input[type=number], input[type=date], input[type=month], select { width:100%; font-size:16px; padding:12px; border:1px solid var(--line); background:transparent; color:var(--fg); border-radius:10px; }
     select option { font-size: 20px; }
     .btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; width:100%; text-align:center; padding:12px; font-weight:700; border-radius:12px; border:1px solid var(--line); background:var(--card); color:var(--fg); cursor:pointer; }
@@ -156,13 +158,12 @@ INDEX_HTML = """<!doctype html>
     }
 
     function NavLinks({to}) {
-      const Button = (k,label)=>html`<button className="btn" onClick=${()=>to(k)}>${label}</button>`;
-      return html`<div className="links">
+      const Button = (k,label)=>html`<button className="btn" style=${{width:'auto'}} onClick=${()=>to(k)}>${label}</button>`;
+      return html`<div className="row" style=${{marginTop:'10px'}}>
         ${Button('home','ホーム')}
         ${Button('withdraw','出金登録')}
         ${Button('goal','目標登録')}
         ${Button('admin','管理者')}
-        ${Button('history','履歴')}
       </div>`;
     }
 
@@ -462,263 +463,3 @@ INDEX_HTML = """<!doctype html>
 </body>
 </html>
 "
-
-def is_int(x):
-    try: int(x); return True
-    except Exception: return False
-
-def valid_date(s:str):
-    try: datetime.strptime(s, "%Y-%m-%d"); return True
-    except Exception: return False
-
-def valid_month(s:str):
-    try: datetime.strptime(s, "%Y-%m"); return True
-    except Exception: return False
-
-def list_goals():
-    rows = read_rows(GOALS_CSV); out = []
-    for i, r in enumerate(rows):
-        if i==0 or len(r)<2: continue
-        goal, amt = r
-        try: out.append({"goal": goal, "amount": int(amt)})
-        except Exception: pass
-    return out
-
-def list_presets():
-    rows = read_rows(PRESETS_CSV); out = []
-    for i, r in enumerate(rows):
-        if i==0 or len(r)<2: continue
-        label, amt = r
-        try: out.append({"label": label, "amount": int(amt)})
-        except Exception: pass
-    return out
-
-def last_n_days_records(n:int):
-    rows = read_rows(ALLOWANCE_CSV)
-    edge = date.today() - timedelta(days=n-1)
-    out = []
-    for i, r in enumerate(rows):
-        if i==0 or len(r)<4: continue
-        d, item, amt, bal = r
-        try:
-            dt = datetime.strptime(d,"%Y-%m-%d").date()
-        except Exception:
-            continue
-        if dt >= edge:
-            try:
-                out.append({"date": d, "item": item, "amount": int(amt), "balance": int(bal)})
-            except Exception:
-                pass
-    return out[::-1]
-
-class AppHandler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        try:
-            p = urlparse(self.path)
-            if p.path == "/":
-                self._send(200, "text/html; charset=utf-8", INDEX_HTML.encode("utf-8")); return
-            if p.path == "/api/records":
-                rows = read_rows(ALLOWANCE_CSV); recs = []
-                for i, r in enumerate(rows):
-                    if i==0 or len(r)<4: continue
-                    d, item, amt, bal = r
-                    try: recs.append({"date": d, "item": item, "amount": int(amt), "balance": int(bal)})
-                    except Exception: pass
-                recs.reverse()
-                ok_json(self, {"records": recs, "balance": get_balance()}); return
-            if p.path == "/api/summary":
-                q = parse_qs(p.query)
-                month = (q.get("month") or [date.today().strftime("%Y-%m")])[0]
-                if not valid_month(month):
-                    month = date.today().strftime("%Y-%m")
-                ok_json(self, month_summary(month)); return
-            if p.path == "/api/home":
-                bal = get_balance()
-                goals_raw = list_goals()
-                goals = [{"goal": g["goal"], "amount": g["amount"], "remaining": max(0, g["amount"]-bal)} for g in goals_raw]
-                presets = list_presets()
-                ok_json(self, {"balance": bal, "last7": last_n_days_records(7), "goals": goals, "presets": presets}); return
-            if p.path == "/api/goals":
-                ok_json(self, list_goals()); return
-            if p.path == "/api/presets":
-                ok_json(self, list_presets()); return
-            if p.path == "/export":
-                q = parse_qs(p.query)
-                which = (q.get("file") or ["allowance"])[0]
-                path = ALLOWANCE_CSV if which=="allowance" else (GOALS_CSV if which=="goals" else PRESETS_CSV)
-                ensure_csv(path, ["date","item","amount","balance"] if path==ALLOWANCE_CSV else (["goal","amount"] if path==GOALS_CSV else ["label","amount"]))
-                with open(path, "rb") as f: data = f.read()
-                self.send_response(200)
-                self.send_header("Content-Type", "text/csv; charset=utf-8")
-                self.send_header("Content-Disposition", f'attachment; filename="{which}.csv"')
-                self.send_header("Content-Length", str(len(data)))
-                self.end_headers(); self.wfile.write(data); return
-            self._send(404, "text/plain; charset=utf-8", b"Not Found")
-        except Exception as e:
-            self._send(500, "text/plain; charset=utf-8", str(e).encode("utf-8"))
-
-    def do_POST(self):
-        try:
-            p = urlparse(self.path)
-            length = int(self.headers.get("Content-Length","0"))
-            if p.path == "/import":
-                form = cgi.FieldStorage(
-                    fp=self.rfile,
-                    headers=self.headers,
-                    environ={'REQUEST_METHOD': 'POST',
-                             'CONTENT_TYPE': self.headers['Content-Type']}
-                )
-                file_type = form.getvalue('file')
-                csv_file_item = form['csvfile']
-
-                if not file_type or not csv_file_item.file:
-                    self._send(400, b'bad request'); return
-
-                path = ALLOWANCE_CSV if file_type == "allowance" else (GOALS_CSV if file_type == "goals" else PRESETS_CSV)
-                
-                # Overwrite the file with new content
-                with open(path, "wb") as f:
-                    f.write(csv_file_item.file.read())
-
-                self.send_response(302)
-                self.send_header('Location', '/')
-                self.end_headers()
-                return
-
-            if p.path == "/api/records":
-                raw = self.rfile.read(length)
-                try: body = json.loads(raw.decode("utf-8"))
-                except Exception:
-                    self._send(400, "text/plain; charset=utf-8", b"invalid json"); return
-                item = (body.get("item") or "").strip()
-                amount = body.get("amount")
-                d = (body.get("date") or "").strip()
-                if not item: self._send(400, "text/plain; charset=utf-8", b"item required"); return
-                if not is_int(amount): self._send(400, "text/plain; charset=utf-8", b"amount must be int"); return
-                if d and not valid_date(d): self._send(400, "text/plain; charset=utf-8", b"invalid date"); return
-                rec = add_record(item, int(amount), d or None)
-                ok_json(self, rec); return
-            if p.path == "/api/goals":
-                raw = self.rfile.read(length)
-                try: body = json.loads(raw.decode("utf-8"))
-                except Exception:
-                    self._send(400, "text/plain; charset=utf-8", b"invalid json"); return
-                goal = (body.get("goal") or "").strip()
-                amount = body.get("amount")
-                if not goal or not is_int(amount):
-                    self._send(400, "text/plain; charset=utf-8", b"bad params"); return
-                append_row(GOALS_CSV, [goal, str(int(amount))])
-                ok_json(self, {"ok": True}); return
-            if p.path == "/api/presets":
-                raw = self.rfile.read(length)
-                try: body = json.loads(raw.decode("utf-8"))
-                except Exception:
-                    self._send(400, "text/plain; charset=utf-8", b"invalid json"); return
-                label = (body.get("label") or "").strip()
-                amount = body.get("amount")
-                if not label or not is_int(amount):
-                    self._send(400, "text/plain; charset=utf-8", b"bad params"); return
-                append_row(PRESETS_CSV, [label, str(int(amount))])
-                ok_json(self, {"ok": True}); return
-            self._send(404, "text/plain; charset=utf-8", b"Not Found")
-        except Exception as e:
-            self._send(500, "text/plain; charset=utf-8", str(e).encode("utf-8"))
-
-    def do_DELETE(self):
-        try:
-            p = urlparse(self.path)
-            if p.path == "/api/goals":
-                q = parse_qs(p.query); name = (q.get("goal") or [""])[0]
-                rows = read_rows(GOALS_CSV)
-                out = [rows[0]] + [r for r in rows[1:] if len(r)>=1 and r[0] != name]
-                write_rows(GOALS_CSV, out)
-                ok_json(self, {"ok": True}); return
-            if p.path == "/api/presets":
-                q = parse_qs(p.query); label = (q.get("label") or [""])[0]
-                rows = read_rows(PRESETS_CSV)
-                out = [rows[0]] + [r for r in rows[1:] if len(r)>=1 and r[0] != label]
-                write_rows(PRESETS_CSV, out)
-                ok_json(self, {"ok": True}); return
-            self._send(404, "text/plain; charset=utf-8", b"Not Found")
-        except Exception as e:
-            self._send(500, "text/plain; charset=utf-8", str(e).encode("utf-8"))
-
-    def _send(self, code:int, ctype:str, data:bytes):
-        self.send_response(code)
-        self.send_header("Content-Type", ctype)
-        self.send_header("Content-Length", str(len(data)))
-        self.end_headers()
-        self.wfile.write(data)
-
-def run_self_tests():
-    global ALLOWANCE_CSV, GOALS_CSV, PRESETS_CSV
-    print("[SELFTEST] start")
-    assert is_int(0) and is_int("10") and is_int(-5)
-    assert not is_int("a")
-    assert valid_date("2025-09-01") and not valid_date("2025-13-01")
-    assert valid_month("2025-09") and not valid_month("2025-00")
-    tmp = tempfile.mkdtemp(prefix="allowance_test_")
-    old_allow, old_goals, old_presets = ALLOWANCE_CSV, GOALS_CSV, PRESETS_CSV
-    try:
-        ALLOWANCE_CSV = os.path.join(tmp, "allowance.csv")
-        GOALS_CSV = os.path.join(tmp, "goals.csv")
-        PRESETS_CSV = os.path.join(tmp, "presets.csv")
-        ensure_csv(ALLOWANCE_CSV, ["date","item","amount","balance"])
-        ensure_csv(GOALS_CSV, ["goal","amount"])
-        ensure_csv(PRESETS_CSV, ["label","amount"])
-        append_row(ALLOWANCE_CSV, ["2025-08-31", "init", "200", "200"])
-        append_row(ALLOWANCE_CSV, ["2025-09-10", "a", "1000", "1200"])
-        append_row(ALLOWANCE_CSV, ["2025-09-11", "b", "-300", "900"])
-        append_row(GOALS_CSV, ["Switch", "25000"])
-        append_row(PRESETS_CSV, ["皿洗い", "100"])
-        s = month_summary("2025-09"); assert s["income"]==1000 and s["expense"]==300 and s["net"]==700
-        rec1 = add_record("bonus", 500, "2025-09-12"); assert rec1["balance"] == 1400
-        rec2 = add_record("snack", -200, "2025-09-13"); assert rec2["balance"] == 1200
-        last7 = last_n_days_records(7); assert isinstance(last7, list)
-        print("[SELFTEST] OK")
-    finally:
-        shutil.rmtree(tmp)
-        ALLOWANCE_CSV, GOALS_CSV, PRESETS_CSV = old_allow, old_goals, old_presets
-
-def try_bind_server(host: str, port: int):
-    return HTTPServer((host, port), AppHandler)
-
-def start_server_with_fallback():
-    hosts = [DEFAULT_HOST]
-    for h in ["127.0.0.1", "0.0.0.0", "::1"]:
-        if h not in hosts: hosts.append(h)
-    port_candidates = [DEFAULT_PORT, 8000, 8080, 3000, 5173, 5500, 9000, 0]
-    seen = set(); ports = []
-    for p in port_candidates:
-        if p not in seen:
-            seen.add(p); ports.append(p)
-    last_err = None
-    for h in hosts:
-        for p in ports:
-            try:
-                srv = try_bind_server(h, p)
-                actual_host, actual_port = srv.server_address
-                display_host = "127.0.0.1" if actual_host in ("0.0.0.0", "::") else actual_host
-                print(f"Serving on http://{display_host}:{actual_port} (bound {actual_host}:{actual_port})")
-                return srv
-            except Exception as e: continue
-    print("[WARN] HTTP server could not bind to any host/port in this environment.")
-    print("       Try on Android/Termux or set ALLOWANCE_HOST/ALLOWANCE_PORT.\n       You can still run self tests: python allowance.py --selftest")
-    if last_err: print(f"[DETAIL] last error: {last_err}")
-    return None
-
-def main():
-    if "--selftest" in sys.argv:
-        run_self_tests(); return
-    ensure_csv(ALLOWANCE_CSV, ["date","item","amount","balance"])
-    ensure_csv(GOALS_CSV, ["goal","amount"])
-    ensure_csv(PRESETS_CSV, ["label","amount"])
-    srv = start_server_with_fallback()
-    if srv is None: return
-    try:
-        srv.serve_forever()
-    except KeyboardInterrupt:
-        print("\nbye")
-
-if __name__ == '__main__':
-    main()

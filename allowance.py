@@ -156,13 +156,12 @@ INDEX_HTML = """<!doctype html>
     }
 
     function NavLinks({to}) {
-      const Button = (k,label)=>html`<button className="btn" onClick=${()=>to(k)}>${label}</button>`;
-      return html`<div className="links">
+      const Button = (k,label)=>html`<button className="btn" style=${{width:'auto'}} onClick=${()=>to(k)}>${label}</button>`;
+      return html`<div className="row" style=${{marginTop:'10px'}}>
         ${Button('home','ホーム')}
         ${Button('withdraw','出金登録')}
         ${Button('goal','目標登録')}
         ${Button('admin','管理者')}
-        ${Button('history','履歴')}
       </div>`;
     }
 
