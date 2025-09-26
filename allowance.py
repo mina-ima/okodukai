@@ -113,7 +113,8 @@ INDEX_HTML = """<!doctype html>
     .wrap { max-width:760px; margin:0 auto; padding:var(--pad); }
     .card { background:var(--card); border-radius:var(--radius); box-shadow:0 1px 2px rgba(0,0,0,.05); padding:var(--pad); margin-bottom:var(--gap); border:1px solid var(--line);}
     .row { display:flex; gap:var(--gap); } .row>* { flex:1; }
-    input[type=text], input[type=number], input[type=date], input[type=month] { width:100%; font-size:16px; padding:12px; border:1px solid var(--line); background:transparent; color:var(--fg); border-radius:10px; }
+    input[type=text], input[type=number], input[type=date], input[type=month], select { width:100%; font-size:16px; padding:12px; border:1px solid var(--line); background:transparent; color:var(--fg); border-radius:10px; }
+    select option { font-size: 20px; }
     .btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; width:100%; text-align:center; padding:12px; font-weight:700; border-radius:12px; border:1px solid var(--line); background:var(--card); color:var(--fg); cursor:pointer; }
     .btn.primary { background:#0b6; color:#fff; border:none; }
     .btn.warn { background:#d33; color:#fff; border:none; }
