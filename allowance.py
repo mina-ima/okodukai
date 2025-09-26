@@ -177,6 +177,20 @@ INDEX_HTML = """<!doctype html>
     function Home({go, data, load}) {
       return html`<${Frag}>
         <div className="card">
+          <div style=${{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+            <div style=${{fontWeight:800}}>目標</div>
+            <a href="#" className="pill" onClick=${e=>{e.preventDefault(); go('goal');}}>目標登録へ</a>
+          </div>
+          ${data.goals.length ? data.goals.map(g=>html`<div style=${{margin:'10px 0'}}>
+            <div style=${{display:'flex', justifyContent:'space-between'}}>
+              <div>${g.goal}</div>
+              <div>${fmtYen(g.amount)}（残り ${fmtYen(g.remaining)}）</div>
+            </div>
+            <div className="goalbar"><div style=${{width: (100*Math.min(1, (data.balance / Math.max(1, g.amount)))).toFixed(0)+'%'}}></div></div>
+          </div>`) : html`<div className="muted">目標は未登録です</div>`}
+        </div>
+
+        <div className="card">
           <div className="grid">
             ${data.presets.length ? data.presets.map(p=>html`
               <button className="btn" onClick=${async()=>{
@@ -208,20 +222,6 @@ INDEX_HTML = """<!doctype html>
                 </tr>`)}
               </table>
             </div>` : html`<div className="muted">直近7日間の記録はありません</div>`}
-        </div>
-
-        <div className="card">
-          <div style=${{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-            <div style=${{fontWeight:800}}>目標</div>
-            <a href="#" className="pill" onClick=${e=>{e.preventDefault(); go('goal');}}>目標登録へ</a>
-          </div>
-          ${data.goals.length ? data.goals.map(g=>html`<div style=${{margin:'10px 0'}}>
-            <div style=${{display:'flex', justifyContent:'space-between'}}>
-              <div>${g.goal}</div>
-              <div>${fmtYen(g.amount)}（残り ${fmtYen(g.remaining)}）</div>
-            </div>
-            <div className="goalbar"><div style=${{width: (100*Math.min(1, (data.balance / Math.max(1, g.amount)))).toFixed(0)+'%'}}></div></div>
-          </div>`) : html`<div className="muted">目標は未登録です</div>`}
         </div>
 
         <${HomeNavLinks} to=${go} />
