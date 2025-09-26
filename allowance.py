@@ -316,11 +316,11 @@ INDEX_HTML = """<!doctype html>
             <tr>
               <th>目標</th>
               <th style=${{textAlign:'right'}}>金額</th>
-              <th style=${{width:'1%'}}></th>
+              <th></th>
             </tr>
             ${goals.map(g=>html`<tr>
               <td>${g.goal}</td><td style=${{textAlign:'right'}}>${fmtYen(g.amount)}</td>
-              <td><button className="btn warn" onClick=${()=>del(g.goal)}>削除</button></td>
+              <td><button className="btn warn" style=${{width:'auto', padding:'6px 10px', fontSize:'12px'}} onClick=${()=>del(g.goal)}>削除</button></td>
             </tr>`)}
           </table>` : html`<div className="muted">なし</div>`}
         </div>
