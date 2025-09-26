@@ -229,7 +229,7 @@ INDEX_HTML = """<!doctype html>
         <div className="card">
           <div className="grid">
             ${data.presets.length ? data.presets.map(p=>html`
-              <button className="btn" onClick=${async()=>{
+              <button className="btn" onClick=${async()=>{ 
                 await api('/api/records',{method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({item:p.label, amount: parseInt(p.amount,10)})});
                 await load();
               }}>${p.label}（${p.amount}）</button>
@@ -362,48 +362,48 @@ INDEX_HTML = """<!doctype html>
           <button type="submit" className="btn">${label}をインポート</button>
         </form>
       `;
-      return html`<${Frag}>\
-        <div className="card">\
-          <div style=${{fontWeight:900, fontSize:18}}>管理者</div>\
-          <div style=${{marginTop:12}}>\
-            <div className="muted" style=${{marginBottom:6}}>データ入出力</div>\
-            <div className="row">\
-              <select id="export-select" className="btn" style=${{flex:1}} onChange=${e=>setExportType(e.target.value)}>\
-                <option value="allowance">入出金履歴</option>\
-                <option value="goals">目標リスト</option>\
-                <option value="presets">プリセット</option>\
-              </select>\
-              <button className="btn primary" onClick=${handleExport}>エクスポート</button>\
-            </div>\
-            <div style=${{display:'flex', flexDirection:'column', gap:10, marginTop:10}}>\
-              <${ImportForm} name="presets" label="プリセット" />\
-              <${ImportForm} name="goals" label="目標リスト" />\
-              <${ImportForm} name="allowance" label="入出金履歴" />\
-            </div>\
-          </div>\
-        </div>\
-\
-        <div className="card">\
-          <div style=${{fontWeight:800}}>お手伝いプリセット編集</div>\
-          <form onSubmit=${add} className="row" style=${{marginTop:10}}>\
-            <input type="text" placeholder="ラベル（例: 皿洗い）" value=${label} onChange=${e=>setLabel(e.target.value)} required />\
-            <input type="number" inputmode="numeric" placeholder="金額（例: 100）" value=${amount} onChange=${e=>setAmount(e.target.value)} required />\
-            <button className="btn primary" type="submit">追加</button>\
-          </form>\
-          <div style=${{fontWeight:800, marginTop:12}}>登録済みプリセット</div>\
-          ${presets.length ? html`<table>\
-            <tr>\
-              <th>ラベル</th>\
-              <th style=${{textAlign:'right'}}>金額</th>\
-              <th></th>\
-            </tr>\
-            ${presets.map(p=>html`<tr>\
-              <td>${p.label}</td><td style=${{textAlign:'right'}}>${fmtYen(p.amount)}</td>\
-              <td><button className="btn warn" style=${{width:'auto', padding:'6px 10px', fontSize:'12px'}} onClick=${()=>del(p.label)}>削除</button></td>\
-            </tr>`)}\
-          </table>` : html`<div className="muted">未登録</div>`}\
-        </div>\
-        <${AdminNavLinks} to=${go} />\
+      return html`<${Frag}>
+        <div className="card">
+          <div style=${{fontWeight:900, fontSize:18}}>管理者</div>
+          <div style=${{marginTop:12}}>
+            <div className="muted" style=${{marginBottom:6}}>データ入出力</div>
+            <div className="row">
+              <select id="export-select" className="btn" style=${{flex:1}} onChange=${e=>setExportType(e.target.value)}>
+                <option value="allowance">入出金履歴</option>
+                <option value="goals">目標リスト</option>
+                <option value="presets">プリセット</option>
+              </select>
+              <button className="btn primary" onClick=${handleExport}>エクスポート</button>
+            </div>
+            <div style=${{display:'flex', flexDirection:'column', gap:10, marginTop:10}}>
+              <${ImportForm} name="presets" label="プリセット" />
+              <${ImportForm} name="goals" label="目標リスト" />
+              <${ImportForm} name="allowance" label="入出金履歴" />
+            </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <div style=${{fontWeight:800}}>お手伝いプリセット編集</div>
+          <form onSubmit=${add} className="row" style=${{marginTop:10}}>
+            <input type="text" placeholder="ラベル（例: 皿洗い）" value=${label} onChange=${e=>setLabel(e.target.value)} required />
+            <input type="number" inputmode="numeric" placeholder="金額（例: 100）" value=${amount} onChange=${e=>setAmount(e.target.value)} required />
+            <button className="btn primary" type="submit">追加</button>
+          </form>
+          <div style=${{fontWeight:800, marginTop:12}}>登録済みプリセット</div>
+          ${presets.length ? html`<table>
+            <tr>
+              <th>ラベル</th>
+              <th style=${{textAlign:'right'}}>金額</th>
+              <th></th>
+            </tr>
+            ${presets.map(p=>html`<tr>
+              <td>${p.label}</td><td style=${{textAlign:'right'}}>${fmtYen(p.amount)}</td>
+              <td><button className="btn warn" style=${{width:'auto', padding:'6px 10px', fontSize:'12px'}} onClick=${()=>del(p.label)}>削除</button></td>
+            </tr>`)}
+          </table>` : html`<div className="muted">未登録</div>`}
+        </div>
+        <${AdminNavLinks} to=${go} />
       </${Frag}>`;
     }
 
@@ -460,7 +460,7 @@ INDEX_HTML = """<!doctype html>
   </script>
 </body>
 </html>
-"""
+"
 
 def is_int(x):
     try: int(x); return True
