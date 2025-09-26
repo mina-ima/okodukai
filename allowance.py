@@ -165,6 +165,15 @@ INDEX_HTML = """<!doctype html>
       </div>`;
     }
 
+    function HomeNavLinks({to}) {
+      const Button = (k,label)=>html`<button className="btn" onClick=${()=>to(k)}>${label}</button>`;
+      return html`<div className="row" style=${{gap: '8px'}}>
+        ${Button('withdraw','出金登録')}
+        ${Button('goal','目標登録')}
+        ${Button('admin','管理者')}
+      </div>`;
+    }
+
     function Home({go, data, load}) {
       return html`<${Frag}>
         <div className="card">
@@ -215,7 +224,7 @@ INDEX_HTML = """<!doctype html>
           </div>`) : html`<div className="muted">目標は未登録です</div>`}
         </div>
 
-        <${NavLinks} to=${go} />
+        <${HomeNavLinks} to=${go} />
         <div className="footer">ローカル専用 / ${window.location.host} / CSV保存</div>
       </${Frag}>`;
     }
