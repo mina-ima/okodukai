@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>お小遣い帳 取扱説明書</title>
+<style>
+:root{--fg:#1a1a1a;--muted:#666;--accent:#2563eb;--bg:#fff;--code:#f4f4f5;--border:#e5e7eb}*{box-sizing:border-box}body{font-family:-apple-system,"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;line-height:1.8;color:var(--fg);background:var(--bg);max-width:820px;margin:0 auto;padding:24px 18px}h1{font-size:1.7rem;border-bottom:3px solid var(--accent);padding-bottom:.4em;margin-top:0}h2{font-size:1.3rem;margin-top:2em;border-left:5px solid var(--accent);padding-left:.5em}h3{font-size:1.1rem;margin-top:1.5em}code{background:var(--code);padding:.15em .4em;border-radius:4px;font-size:.9em}pre{background:var(--code);padding:14px;border-radius:8px;overflow-x:auto}pre code{background:none;padding:0}table{border-collapse:collapse;width:100%;margin:1em 0}th,td{border:1px solid var(--border);padding:8px 10px;text-align:left}th{background:#f8fafc}blockquote{border-left:4px solid var(--accent);background:#f0f6ff;margin:1em 0;padding:.6em 1em;color:#334}a{color:var(--accent)}footer{margin-top:3em;padding-top:1em;border-top:1px solid var(--border);color:var(--muted);font-size:.85rem}@media(max-width:600px){body{padding:16px 12px}h1{font-size:1.4rem}}
+</style>
+</head>
+<body>
+<h1>お小遣い帳 取扱説明書</h1>
+<blockquote>スマホやパソコンのブラウザで使える、シンプルなお小遣い・収支管理アプリです。</blockquote>
+
+<h2>このアプリでできること</h2>
+<ul>
+<li>お小遣いの「入金（もらった）」「出金（つかった）」を記録できます。</li>
+<li>記録するたびに、いまの残高が自動で計算されます。</li>
+<li>月ごとの収入・支出・差し引き（残った金額）をまとめて確認できます。</li>
+<li>目標金額（goals）やよく使う金額のプリセット（presets）を登録して、入力をラクにできます。</li>
+<li>データはCSVファイル（<code>allowance.csv</code> ほか）に保存されるので、表計算ソフトでも開けます。</li>
+</ul>
+<blockquote>注記: 上記はソースコード（収支記録・残高計算・月次集計・CSV保存）から確認できた範囲です。画面上の細かな操作ボタンの一部は未確認です。</blockquote>
+
+<h2>想定ユーザー・利用シーン</h2>
+<ul>
+<li>お小遣いの管理を始めたいお子さんや、その保護者の方。</li>
+<li>かんたんな収支メモをスマホで付けたい方。</li>
+<li>専用アプリを入れず、ブラウザだけで使いたい方。</li>
+</ul>
+
+<h2>動作環境・前提</h2>
+<ul>
+<li>パソコン、またはスマートフォンのブラウザ（Chrome / Safari など）。</li>
+<li>アプリ本体を動かすために Python 3 が必要です（パソコンで起動する場合）。</li>
+<li>Android アプリとしても配布できる構成になっています（<code>buildozer.spec</code> を同梱）。</li>
+</ul>
+
+<h2>セットアップ</h2>
+<h3>パソコンで使う場合</h3>
+<ol>
+<li>このアプリのフォルダ（<code>okodukai</code>）を用意します。</li>
+<li>パソコンに Python 3 がインストールされていることを確認します。</li>
+<li>ターミナルでフォルダを開き、後述の「起動コマンド」を実行します。</li>
+</ol>
+<h3>Android アプリとして使う場合</h3>
+<p>同梱の <code>buildozer.spec</code> と <code>ANDROID_DEPLOYMENT_GUIDE.md</code> を参照してください（ビルド手順が記載されています）。</p>
+
+<h2>使い方（ステップbyステップ）</h2>
+<ol>
+<li>アプリを起動すると、ブラウザで <code>http://127.0.0.1:8000</code> の画面が開きます（Android では自動で開きます）。</li>
+<li>「入金」または「出金」を選び、項目名（例: おこづかい、おかし）と金額を入力します。</li>
+<li>登録すると、いまの残高が自動で計算されて表示されます。</li>
+<li>月の集計を見ると、その月の収入・支出・差し引きが確認できます。</li>
+<li>よく使う金額は「プリセット」に、貯金の目標は「目標」に登録しておくと、次回から入力がラクになります。</li>
+</ol>
+
+<h2>主な機能</h2>
+<table>
+<tr><th>機能</th><th>説明</th></tr>
+<tr><td>収支の記録</td><td>入金・出金を日付・項目・金額で記録</td></tr>
+<tr><td>残高の自動計算</td><td>記録のたびに最新残高を計算</td></tr>
+<tr><td>月次集計</td><td>指定した月の収入・支出・差し引きを表示</td></tr>
+<tr><td>目標（goals）</td><td>貯金の目標金額を登録</td></tr>
+<tr><td>プリセット（presets）</td><td>よく使う金額・ラベルを登録</td></tr>
+<tr><td>CSV保存</td><td><code>allowance.csv</code> などにデータを保存</td></tr>
+</table>
+
+<h2>よくある質問・トラブルシューティング</h2>
+<ul>
+<li><strong>Q. 画面が開きません。</strong> A. アプリ（サーバー）が起動しているか確認してください。起動後にブラウザで <code>http://127.0.0.1:8000</code> を開きます。</li>
+<li><strong>Q. データはどこに保存されますか？</strong> A. アプリのフォルダ内の <code>allowance.csv</code>（収支）、<code>goals.csv</code>（目標）、<code>presets.csv</code>（プリセット）に保存されます。</li>
+<li><strong>Q. ポート番号を変えたい。</strong> A. 環境変数 <code>ALLOWANCE_PORT</code>（既定 8000）や <code>ALLOWANCE_HOST</code>（既定 127.0.0.1）で変更できます。</li>
+<li><strong>Q. データを引っ越したい。</strong> A. CSVファイルをコピーすれば、別の環境にデータを移せます。</li>
+</ul>
+
+<h2>開発者向けメモ</h2>
+<ul>
+<li><strong>技術スタック</strong>: Python 3 標準ライブラリの <code>http.server</code>（軽量HTTPサーバー）。フロントはサーバーが返す単一HTML（インラインCSS/JS、ダークモード対応・モバイル最適化）。データは CSV ファイル管理。</li>
+<li><strong>主なファイル</strong>: <code>main.py</code>（起動エントリ。サーバーをスレッド起動し、Android では <code>android.open_url</code> でブラウザを開く）、<code>allowance.py</code>（HTTPハンドラ・収支ロジック・HTML）。</li>
+<li><strong>環境変数</strong>: <code>ALLOWANCE_HOST</code>（既定 <code>127.0.0.1</code>）、<code>ALLOWANCE_PORT</code>（既定 <code>8000</code>）。</li>
+<li><strong>Android ビルド</strong>: <code>buildozer</code>（<code>buildozer.spec</code> 同梱）。詳細は <code>ANDROID_DEPLOYMENT_GUIDE.md</code> を参照。</li>
+<li><strong>本番URL</strong>: なし（ローカル/Android アプリ前提。常設の公開URLは未確認）。</li>
+<li><strong>リポジトリ</strong>: <a href="https://github.com/mina-ima/okodukai">https://github.com/mina-ima/okodukai</a></li>
+</ul>
+<h3>起動コマンド（パソコン）</h3>
+<pre><code>python3 main.py
+# または
+python3 allowance.py</code></pre>
+<p>起動後、ブラウザで <code>http://127.0.0.1:8000</code> を開く。</p>
+
+<footer>このページは自動生成された取扱説明書です。</footer>
+</body>
+</html>
